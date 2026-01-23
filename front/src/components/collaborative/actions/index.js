@@ -7,6 +7,8 @@ import {
 
 import createDelimitedBlockCommand from './delimited-block.js'
 import createInlineBlockCommand from './inline-block.js'
+import requestLinkedData  from './request-linked-data.js'
+import { Key } from 'lucide-react'
 
 export { Separator } from 'monaco-editor/esm/vs/base/common/actions'
 
@@ -91,6 +93,9 @@ export const actions = {
     smallcaps: createInlineBlockCommand('smallcaps'),
     sponsor: createDelimitedBlockCommand('sponsor'),
   },
+  enrich: {
+    ner: requestLinkedData('ner')
+  }
 }
 
 /**
@@ -245,4 +250,17 @@ export function MarkdownMenu({ editor, t }) {
       _bindAction(actions.md.footnoteInline),
     ]
   )
+}
+
+export function EnrichMenu({ editor, t}) {
+  const _bindAction = bindAction.bind(null, editor, t)
+
+  return new SubmenuAction(
+    'stylo--enrich--root',
+    t('stylo.enrich.rootMenu'),
+    [
+      _bindAction(actions.enrich.ner),
+    ]
+  )
+
 }

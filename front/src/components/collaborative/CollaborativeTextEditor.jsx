@@ -6,6 +6,7 @@ import { shallowEqual, useDispatch, useSelector } from 'react-redux'
 import { MonacoBinding } from 'y-monaco'
 
 import {
+  EnrichMenu,
   MarkdownMenu,
   MetopesMenu,
   Separator,
@@ -143,6 +144,7 @@ export default function CollaborativeTextEditor({
           new Separator(),
           MetopesMenu({ editor, t }),
           MarkdownMenu({ editor, t }),
+          EnrichMenu({editor, t}),
         ]
       }
 

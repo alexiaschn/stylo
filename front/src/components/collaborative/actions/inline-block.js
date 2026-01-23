@@ -6,7 +6,7 @@ import { blockAttributes } from './index.js'
  * @typedef {import('monaco-editor').editor.IActionDescriptor} IActionDescriptor
  * @typedef {import('monaco-editor').editor.ICodeEditor} ICodeEditor
  */
-
+ 
 /**
  * @param {string} id
  * @param {object} opts

@@ -22,10 +22,14 @@
       "hyperlink": "Hyperlien",
       "inlinequote": "$t(types.inline) citation",
       "italic": "Italique",
+      "ner": "NER2", 
       "smallcaps": "$t(types.inline) petites capitales"
     }
   },
   "stylo": {
+    "enrich": {
+      "rootMenu": "Enrichissement sémantique"
+    },
     "markdown": {
       "rootMenu": "Balisage léger"
     },
@@ -36,6 +40,7 @@
       "rootMenu": "Métopes",
       "texte": "Texte"
     }
+
   },
   "types": {
     "block": "Bloc",
