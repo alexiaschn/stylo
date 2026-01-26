@@ -2,6 +2,8 @@ import { Range, Selection } from 'monaco-editor/esm/vs/editor/editor.api';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import createInlineBlockCommand from './inline-block.js'
 
+
+// available authorities ["DBpedia-All","DBpedia-Event","DBpedia-Organisation","DBpedia-Person","DBpedia-Place","DBpedia-Work","Geonames","Getty-All","Getty-AAT","Getty-CONA","Getty-TGN","Getty-ULAN","GND-Organisation","GND-Person","GND-Place","GND-Subject","GND-Work","LINCS-All","LINCS-Person","LINCS-Place","LINCS-Work","LINCS-Group","LINCS-Event","VIAF-Bibliographic","VIAF-Corporate","VIAF-Expressions","VIAF-Geographic","VIAF-Personal","VIAF-Works","Wikidata"]
 /**
  * @typedef {import('monaco-editor').editor.IActionDescriptor} IActionDescriptor
  * @typedef {import('monaco-editor').editor.ICodeEditor} ICodeEditor
@@ -42,25 +44,26 @@ export default function requestLinkedData(id,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           entity: originalText,
-          authorities: ["Wikidata"],
+          authorities: ["Wikidata", "LINCS-All"], 
           moreResults: false,
         }),
       });
 
       const data = await response.json();
-      if (data[0]?.matches && data[0].matches.length > 0) {
-        const userSelection = await manualDesambiguisation(editor, data[0].matches);
-        if (userSelection) {
-          const uri = userSelection.uri;
-          const label = clean(userSelection.description);
-          const addURI = createInlineBlockCommand('ner', {
-            attrs: null,
-            body_pre: '[',
-            body_post: `](${uri} "${label}")`,
-          });
-          addURI.run(editor);
-        }
+      
+      const userSelection = await manualDesambiguisation(editor, data);
+      console.log(userSelection); // returns the selected table line 
+      if (userSelection) {
+        const uri = userSelection.uri;
+        const label = clean(userSelection.description);
+        const addURI = createInlineBlockCommand('ner', {
+          attrs: null,
+          body_pre: '[',
+          body_post: `](${uri} "${label}")`,
+        });
+        addURI.run(editor);
       }
+      
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -68,9 +71,9 @@ export default function requestLinkedData(id,
 
   /**
    * @param {ICodeEditor} editor
-   * @param {Array} matches
+   * @param {Array} data
    */
-  async function manualDesambiguisation(editor, matches) {
+  async function manualDesambiguisation(editor, data) {
     return new Promise((resolve) => {
       // Create the widget object
       const widget = {
@@ -84,60 +87,104 @@ export default function requestLinkedData(id,
             widget.domNode.style.backgroundColor = 'white';
             widget.domNode.style.border = '1px solid black';
             widget.domNode.style.zIndex = '1000';
+            widget.domNode.style.maxHeight = '300px';
             widget.domNode.style.width = '200px';
+            // widget.domNode.style.overflowY = 'auto';
+
+            // Add content to the widget, max 10 items per authority
+            const widgetContent = document.createElement('table');
+            widgetContent.style.borderCollapse = 'collapse';
+            widgetContent.style.width = '100%';
+
+            // Array to store all matches with their authority
+          const allMatches = [];
+          const selectableRows = [];
 
 
-            // Add items to the widget, max 10 items
-            matches.slice(0,10).forEach((match, index) => {
-              const item = document.createElement('div');
-              item.textContent = match.description;
-              item.style.padding = '5px';
-              item.style.cursor = 'pointer';
-              item.style.backgroundColor = index === widget.selectedIndex ? '#e0e0e0' : 'transparent';
-              item.onclick = () => {
-                resolve(match);
-                editor.removeContentWidget(widget);
-              };
-              widget.domNode.appendChild(item);
+          /// Loop through each authority in the data
+          data.forEach((authority) => {
+            // Create a header row for the authority
+            const authorityHeader = document.createElement('tr');
+            const authorityHeaderCell = document.createElement('th');
+            authorityHeaderCell.textContent = authority.authority;
+            authorityHeaderCell.colSpan = 1;
+            authorityHeaderCell.style.textAlign = 'left';
+            authorityHeaderCell.style.padding = '8px';
+            authorityHeaderCell.style.borderBottom = '1px solid #ddd';
+            authorityHeaderCell.style.backgroundColor = '#f5f5f5';
+            authorityHeader.appendChild(authorityHeaderCell);
+            widgetContent.appendChild(authorityHeader);
+
+            // Add matches for the authority, max 10
+            authority.matches.slice(0, 10).forEach((match) => {
+              allMatches.push({ authority: authority.authority, match });
             });
+          });
+            // Add all matches to the table
+          allMatches.forEach((entry, index) => {
+            const tr = document.createElement('tr');
+            tr.dataset.selectable = 'true';
 
-            // Function to update the selected item's appearance
-            const updateSelection = () => {
-              const items = widget.domNode.querySelectorAll('div');
-              items.forEach((item, index) => {
-                item.style.backgroundColor = index === widget.selectedIndex ? '#e0e0e0' : 'transparent';
-              });
+            const descriptionCell = document.createElement('td');
+            descriptionCell.textContent = entry.match.description;
+            descriptionCell.style.padding = '5px';
+            descriptionCell.style.cursor = 'pointer';
+            descriptionCell.style.borderBottom = '1px solid #eee';
+            descriptionCell.style.backgroundColor =
+              index === widget.selectedIndex ? '#e0e0e0' : 'transparent';
+
+
+            tr.appendChild(descriptionCell);
+            widgetContent.appendChild(tr);
+            selectableRows.push(tr);
+
+
+            descriptionCell.onclick = () => {
+              resolve(entry.match); // Resolve with the selected match
+              editor.removeContentWidget(widget);
             };
 
-            // Add keyboard event listener
-            widget.domNode.addEventListener(
-              'keydown',
-              (e) => {
-                if (['ArrowUp', 'ArrowDown', 'Enter'].includes(e.key)) {
-                  e.preventDefault();
-                  e.stopImmediatePropagation();
-                }
+          });
+
+          widget.domNode.appendChild(widgetContent);
+
+          // Function to update the selected item's appearance
+          const updateSelection = () => {
             
-                if (e.key === 'ArrowUp' && widget.selectedIndex > 0) {
-                  widget.selectedIndex--;
-                  updateSelection();
-                } else if (e.key === 'ArrowDown' && widget.selectedIndex < matches.length - 1) {
-                  widget.selectedIndex++;
-                  updateSelection();
-                } else if (e.key === 'Enter') {
-                  resolve(matches[widget.selectedIndex]);
-                  editor.removeContentWidget(widget);
-                }
-              },
-              true // 👈 capture phase
-            );
-            
-            // Focus the widget so it can receive keyboard events
-            widget.domNode.tabIndex = 0;
-            widget.domNode.focus();
-          }
-          return widget.domNode;
-        },
+            selectableRows.forEach((row, index) => {
+              const cell = row.firstElementChild;
+              cell.style.backgroundColor =
+                index === widget.selectedIndex ? '#e0e0e0' : 'transparent';
+            });
+          };
+          
+          // Add keyboard event listener
+          widget.domNode.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'Enter'].includes(e.key)) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+            }
+            if (e.key === 'ArrowUp' && widget.selectedIndex > 0) {
+              widget.selectedIndex--;
+              updateSelection();
+            } else if (e.key === 'ArrowDown' && widget.selectedIndex < selectableRows.length - 1) {
+              widget.selectedIndex++;
+              updateSelection();
+            } else if (e.key === 'Enter' && selectableRows.length > 0) {
+              const selectedMatch = allMatches[widget.selectedIndex].match;
+              resolve(selectedMatch); // Resolve with the selected match
+              editor.removeContentWidget(widget);
+            }
+          }, true
+        );
+
+          // Focus the widget so it can receive keyboard events
+          widget.domNode.tabIndex = 0;
+          widget.domNode.focus();
+        }
+        return widget.domNode;
+      },
+
         getPosition: () => {
           const selection = editor.getSelection();
           return {
@@ -159,8 +206,8 @@ export default function requestLinkedData(id,
     });
   }
 
-  function clean(label) {
-    return label.replace(/"/g, "'");
+  function clean(description) {
+    return description.replace(/"/g, "'");
   }
 
   return {
