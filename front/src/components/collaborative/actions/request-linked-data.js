@@ -7,11 +7,32 @@ import createInlineBlockCommand from './inline-block.js'
  * @typedef {import('monaco-editor').editor.ICodeEditor} ICodeEditor
  */
 
+
+/**
+ * @typedef {import('monaco-editor').editor.IActionDescriptor} IActionDescriptor
+ * @typedef {import('monaco-editor').editor.ICodeEditor} ICodeEditor
+ */
+ 
 /**
  * @param {string} id
+ * @param {object} opts
+ * @param {string?} opts.label
+ * @param {string?} opts.contextMenuGroupId
+ * @param {number?} opts.keybindings
+ * @param {string?} opts.className
+ * @param {{[key: string]: string}?} opts.attrs
+ * @param {string?} opts.body_pre
+ * @param {string?} opts.body_post
  * @returns {IActionDescriptor}
  */
-export default function requestLinkedData(id) {
+
+
+export default function requestLinkedData(id, 
+  {
+    keybindings = [],
+
+  }
+) {
   /**
    * @param {ICodeEditor} editor
    */
@@ -123,7 +144,7 @@ export default function requestLinkedData(id) {
     keybindingContext: null,
     contextMenuOrder: 1,
     enabled: true,
-    keybindings: [],
+    keybindings,
     run,
   };
 
