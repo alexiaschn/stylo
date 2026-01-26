@@ -94,7 +94,8 @@ export const actions = {
     sponsor: createDelimitedBlockCommand('sponsor'),
   },
   enrich: {
-    ner: requestLinkedData('ner')
+    ner: requestLinkedData('ner'
+    )
   }
 }
 

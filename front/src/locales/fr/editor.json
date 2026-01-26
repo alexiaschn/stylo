@@ -22,7 +22,7 @@
       "hyperlink": "Hyperlien",
       "inlinequote": "$t(types.inline) citation",
       "italic": "Italique",
-      "ner": "NER2", 
+      "ner": "manual NER", 
       "smallcaps": "$t(types.inline) petites capitales"
     }
   },

@@ -1,4 +1,5 @@
 import { Range, Selection } from 'monaco-editor/esm/vs/editor/editor.api';
+import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import createInlineBlockCommand from './inline-block.js'
 
 /**
@@ -46,35 +47,87 @@ export default function requestLinkedData(id) {
   
         const data = await response.json();
         if (data[0]?.matches && data[0].matches.length > 0) {
-            console.log(data);
-        
-            const uri = data[0].matches[0].uri; // Assuming the API returns a URI for the entity
-            const label = data[0].matches[0].description;
-            // Add annotation or decoration to the editor
-            console.log('first match uri', uri);
+          const userSelection = await manualDesambiguisation(editor, data[0].matches);
+          if (userSelection) {
+            const uri = userSelection.uri;
+            const label = clean(userSelection.description);
             const addURI = createInlineBlockCommand('ner', {
-                attrs: null,
-                body_pre: '[', 
-                body_post: `](${uri} "${label}")`,
-                });
+              attrs: null,
+              body_pre: '[',
+              body_post: `](${uri} "${label}")`,
+            });
             addURI.run(editor);
-            };
+          }
+            }
+          } catch (error) {
+            console.error("Error fetching data:", error);
+          }
+        }
 
-        return data; // Return the data for further processing
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        return null;
-      }
+
+    /**
+   * @param {ICodeEditor} editor
+   * @param {Array} matches
+   */
+    async function manualDesambiguisation(editor, matches) {
+      return new Promise((resolve) => {
+        const widget = {
+          domNode: null,
+          getId: () => 'ner.suggest.widget',
+          getDomNode: () => {
+            if (!widget.domNode) {
+              widget.domNode = document.createElement('div');
+              widget.domNode.style.position = 'absolute';
+              widget.domNode.style.backgroundColor = 'white';
+              widget.domNode.style.border = '1px solid #ccc';
+              widget.domNode.style.zIndex = '1000';
+  
+              matches.forEach((match, index) => {
+                const item = document.createElement('div');
+                item.textContent = match.description;
+                item.style.padding = '5px';
+                item.style.cursor = 'pointer';
+                item.onclick = () => {
+                  resolve(match);
+                  editor.removeContentWidget(widget);
+                };
+                widget.domNode.appendChild(item);
+              });
+            }
+            return widget.domNode;
+          },
+          getPosition: () => {
+            const selection = editor.getSelection();
+            return {
+              position: {
+                lineNumber: selection.endLineNumber,
+                column: selection.endColumn,
+              },
+              preference: [monaco.editor.ContentWidgetPositionPreference.BELOW]
+            };
+          }
+        };
+  
+        editor.addContentWidget(widget);
+      });
     }
-    return {
-        id: `stylo--infratextual-markup--${id}`,
-        label: `actions.infratextual-inline.${id}`,
-        contextMenuGroupId: '1_modification',
-        keybindingContext: null,
-        contextMenuOrder: 1,
-        enabled: true,
-        keybindings: [],
-        run,
-      };
+  function clean(label) {
+    return label.replace(/"/, "'");
   }
+
+
+  return {
+    id: `stylo--infratextual-markup--${id}`,
+    label: `actions.infratextual-inline.${id}`,
+    contextMenuGroupId: '1_modification',
+    keybindingContext: null,
+    contextMenuOrder: 1,
+    enabled: true,
+    keybindings: [],
+    run,
+  };
+
+}
+
+
 
