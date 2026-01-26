@@ -44,7 +44,7 @@ export default function requestLinkedData(id,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           entity: originalText,
-          authorities: ["Wikidata", "LINCS-All"], 
+          authorities: ["Wikidata", "VIAF-Personal"], 
           moreResults: false,
         }),
       });
@@ -103,49 +103,45 @@ export default function requestLinkedData(id,
 
           /// Loop through each authority in the data
           data.forEach((authority) => {
-            // Create a header row for the authority
-            const authorityHeader = document.createElement('tr');
-            const authorityHeaderCell = document.createElement('th');
-            authorityHeaderCell.textContent = authority.authority;
-            authorityHeaderCell.colSpan = 1;
-            authorityHeaderCell.style.textAlign = 'left';
-            authorityHeaderCell.style.padding = '8px';
-            authorityHeaderCell.style.borderBottom = '1px solid #ddd';
-            authorityHeaderCell.style.backgroundColor = '#f5f5f5';
-            authorityHeader.appendChild(authorityHeaderCell);
-            widgetContent.appendChild(authorityHeader);
-
-            // Add matches for the authority, max 10
+            // ---- authority header ----
+            const headerRow = document.createElement('tr');
+            const headerCell = document.createElement('th');
+          
+            headerCell.textContent = authority.authority;
+            headerCell.colSpan = 1;
+            headerCell.style.textAlign = 'left';
+            headerCell.style.padding = '8px';
+            headerCell.style.borderBottom = '1px solid #ddd';
+            headerCell.style.backgroundColor = '#f5f5f5';
+          
+            headerRow.appendChild(headerCell);
+            widgetContent.appendChild(headerRow);
+          
+            // ---- authority matches ----
             authority.matches.slice(0, 10).forEach((match) => {
+              const index = allMatches.length;
+          
               allMatches.push({ authority: authority.authority, match });
+          
+              const tr = document.createElement('tr');
+              tr.dataset.selectable = 'true';
+          
+              const td = document.createElement('td');
+              td.textContent = match.description;
+              td.style.padding = '5px';
+              td.style.cursor = 'pointer';
+              td.style.borderBottom = '1px solid #eee';
+          
+              tr.appendChild(td);
+              widgetContent.appendChild(tr);
+              selectableRows.push(tr);
+          
+              td.onclick = () => {
+                resolve(match);
+                editor.removeContentWidget(widget);
+              };
             });
           });
-            // Add all matches to the table
-          allMatches.forEach((entry, index) => {
-            const tr = document.createElement('tr');
-            tr.dataset.selectable = 'true';
-
-            const descriptionCell = document.createElement('td');
-            descriptionCell.textContent = entry.match.description;
-            descriptionCell.style.padding = '5px';
-            descriptionCell.style.cursor = 'pointer';
-            descriptionCell.style.borderBottom = '1px solid #eee';
-            descriptionCell.style.backgroundColor =
-              index === widget.selectedIndex ? '#e0e0e0' : 'transparent';
-
-
-            tr.appendChild(descriptionCell);
-            widgetContent.appendChild(tr);
-            selectableRows.push(tr);
-
-
-            descriptionCell.onclick = () => {
-              resolve(entry.match); // Resolve with the selected match
-              editor.removeContentWidget(widget);
-            };
-
-          });
-
           widget.domNode.appendChild(widgetContent);
 
           // Function to update the selected item's appearance
