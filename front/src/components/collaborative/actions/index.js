@@ -7,7 +7,9 @@ import {
 
 import createDelimitedBlockCommand from './delimited-block.js'
 import createInlineBlockCommand from './inline-block.js'
-import requestLinkedData  from './request-linked-data.js'
+import pressoirInlineBlockCommand  from './pressoir-ner-inline.js'
+import pressoirNerInlineBlockCommand  from './pressoir-ner-with-type-inline.js'
+import hyperlinkNERInline  from './hyperlink-ner-inline.js'
 import { Key } from 'lucide-react'
 
 export { Separator } from 'monaco-editor/esm/vs/base/common/actions'
@@ -94,10 +96,19 @@ export const actions = {
     sponsor: createDelimitedBlockCommand('sponsor'),
   },
   enrich: {
-    ner: requestLinkedData('ner', {
-        keybindings: [KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyN]
+    nernotype: pressoirInlineBlockCommand('nernotype', {
+        keybindings: [KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyV]
        }
-    )
+    ),
+    pressoirner: pressoirNerInlineBlockCommand('pressoirner', {
+      keybindings: [KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyN]
+
+    }),
+    hyperlinkner: hyperlinkNERInline('hyperlinkner', 
+      {
+        keybindings: [KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyB]
+       }
+    ),
   }
 }
 
@@ -262,7 +273,9 @@ export function EnrichMenu({ editor, t}) {
     'stylo--enrich--root',
     t('stylo.enrich.rootMenu'),
     [
-      _bindAction(actions.enrich.ner),
+      _bindAction(actions.enrich.nernotype),
+      _bindAction(actions.enrich.hyperlinkner),
+      _bindAction(actions.enrich.pressoirner),
     ]
   )
 

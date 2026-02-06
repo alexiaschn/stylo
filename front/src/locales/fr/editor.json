@@ -20,9 +20,11 @@
       "bold": "Gras",
       "footnote-inline": "Note",
       "hyperlink": "Hyperlien",
+      "hyperlinkner": "Hyperlink-type NER",
       "inlinequote": "$t(types.inline) citation",
       "italic": "Italique",
-      "ner": "manual NER", 
+      "nernotype": "Pressoir-without-type NER", 
+      "pressoirner": "Pressoir-with-type NER",
       "smallcaps": "$t(types.inline) petites capitales"
     }
   },

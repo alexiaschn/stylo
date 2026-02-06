@@ -23,7 +23,7 @@ import createInlineBlockCommand from './inline-block.js'
  */
 
 
-export default function requestLinkedData(id, 
+export default function hyperlinkNERInline(id,
   {
     keybindings = [],
 
@@ -37,7 +37,8 @@ export default function requestLinkedData(id,
     const range = new Range(startLineNumber, startColumn, endLineNumber, endColumn);
     const originalText = editor.getModel().getValueInRange(range) || '';
     console.log("Request function sent for ", originalText);
-
+    // curl -X POST "https://lincs-api.lincsproject.ca/api/link/reconcile" -d '{"entity": "Victor Hugo", "authorities": ["Wikidata", "LINCS-Person"], "moreResults": false}' -H "Content-Type: application/json" -H "Accept: application/json"
+    // [{"authority":"Wikidata","matches":[{"uri":"http://www.wikidata.org/entity/Q535","label":"Victor Hugo","description":"French novelist, poet, dramatist and politician (1802–1885)"},{"uri":"http://www.wikidata.org/entity/Q1459231","label":"Victor Hugo","description":"Paris Métro station"},{"uri":"http://www.wikidata.org/entity/Q55714009","label":"Victor Hugo","description":"male given name"},{"uri":"http://www.wikidata.org/entity/Q3557372","label":"Victor Hugo","description":"Leon Gambetta-class armoured cruiser"}]},{"authority":"LINCS-Person","matches":[{"uri":"http://www.wikidata.org/entity/Q535","label":"Victor Hugo","description":""},{"uri":"http://id.lincsproject.ca/nN5LW0TIwir","label":"Hugo Torres","description":""},{"uri":"http://viaf.org/viaf/14328320","label":"Hugo Reid","description":""},{"uri":"http://viaf.org/viaf/283181724","label":"Hugo Laubach","description":""}]}]
     try {
       const response = await fetch("https://lincs-api.lincsproject.ca/api/link/reconcile", {
         method: "POST",
@@ -54,12 +55,14 @@ export default function requestLinkedData(id,
       const userSelection = await manualDesambiguisation(editor, data);
       console.log(userSelection); // returns the selected table line 
       if (userSelection) {
+        // const authority = userSelection.authority;
         const uri = userSelection.uri;
-        const label = clean(userSelection.description);
+        const label = clean(userSelection.label);
+        // [le grand philosophe]{.personnalite id=”Platon” idwiki="https://www.wikidata.org/wiki/Q959”}
         const addURI = createInlineBlockCommand('ner', {
           attrs: null,
           body_pre: '[',
-          body_post: `](${uri} "${label}")`,
+          body_post: `]("${uri}", "${label}")`,
         });
         addURI.run(editor);
       }
@@ -100,6 +103,24 @@ export default function requestLinkedData(id,
           const allMatches = [];
           const selectableRows = [];
 
+          // Check if there are no matches at all
+          const hasMatches = data.some(authority => authority.matches && authority.matches.length > 0);
+
+          if (!hasMatches) {
+            const noMatchesRow = document.createElement('tr');
+            const noMatchesCell = document.createElement('td');
+            noMatchesCell.textContent = 'No matches found';
+            noMatchesCell.style.padding = '10px';
+            noMatchesCell.style.textAlign = 'center';
+            noMatchesRow.appendChild(noMatchesCell);
+            widgetContent.appendChild(noMatchesRow);
+            widget.domNode.appendChild(widgetContent);
+
+            // Resolve with null or a custom object indicating no matches
+            setTimeout(() => resolve(null), 500);
+            return widget.domNode;
+          }
+
 
           /// Loop through each authority in the data
           data.forEach((authority) => {
@@ -137,7 +158,7 @@ export default function requestLinkedData(id,
               selectableRows.push(tr);
           
               td.onclick = () => {
-                resolve(match);
+                resolve({uri: match.uri, label: match.label, authority: authority.authority});
                 editor.removeContentWidget(widget);
               };
             });
@@ -195,6 +216,21 @@ export default function requestLinkedData(id,
 
       // Add the widget to the editor
       editor.addContentWidget(widget);
+
+      // Function to handle clicks outside the widget
+      const handleClickOutside = (event) => {
+        if (widget.domNode && !widget.domNode.contains(event.target)) {
+          resolve(null); // Resolve with null to indicate the user clicked outside
+          editor.removeContentWidget(widget);
+          document.removeEventListener('click', handleClickOutside);
+        }
+      };
+
+      // Add event listener for clicks outside the widget
+      document.addEventListener('click', handleClickOutside);
+
+
+
       // forcing refocusing 
       requestAnimationFrame(() => {
         widget.domNode?.focus();
