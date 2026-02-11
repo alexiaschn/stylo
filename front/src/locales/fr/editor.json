@@ -24,6 +24,7 @@
       "inlinequote": "$t(types.inline) citation",
       "italic": "Italique",
       "nernotype": "Pressoir-without-type NER", 
+      "nerparagraph": "NER paragraphe entier",
       "pressoirner": "Pressoir-with-type NER",
       "smallcaps": "$t(types.inline) petites capitales"
     }

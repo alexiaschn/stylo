@@ -9,6 +9,7 @@ import createDelimitedBlockCommand from './delimited-block.js'
 import createInlineBlockCommand from './inline-block.js'
 import pressoirInlineBlockCommand  from './pressoir-ner-inline.js'
 import pressoirNerInlineBlockCommand  from './pressoir-ner-with-type-inline.js'
+import pressoirInlineParagraph  from './pressoir-ner-with-type-paragraph.js'
 import hyperlinkNERInline  from './hyperlink-ner-inline.js'
 import { Key } from 'lucide-react'
 
@@ -109,6 +110,10 @@ export const actions = {
         keybindings: [KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyB]
        }
     ),
+    nerparagraph : pressoirInlineParagraph('nerparagraph', {
+      keybindings: [KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyJ]
+      
+    }),
   }
 }
 
@@ -276,6 +281,7 @@ export function EnrichMenu({ editor, t}) {
       _bindAction(actions.enrich.nernotype),
       _bindAction(actions.enrich.hyperlinkner),
       _bindAction(actions.enrich.pressoirner),
+      _bindAction(actions.enrich.nerparagraph),
     ]
   )
 

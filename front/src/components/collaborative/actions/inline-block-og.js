@@ -29,8 +29,6 @@ export default function createInlineBlockCommand(
     attrs = {},
     body_pre = '[',
     body_post = ']',
-    offset_start = 0,
-    offset_end = 0,
   } = {}
 ) {
   /**
@@ -39,17 +37,14 @@ export default function createInlineBlockCommand(
   function run(editor) {
     const { startLineNumber, startColumn, endLineNumber, endColumn } =
       editor.getSelection()
-    console.log("selection range", { startLineNumber, startColumn, endLineNumber, endColumn });
-    console.log(offset_end);
-    // let endColumn_true = endColumn; // Default to original endColumn
 
     const range = new Range(
       startLineNumber,
-      startColumn + offset_start,
+      startColumn,
       endLineNumber,
-      offset_end !== 0 ? startColumn + offset_end : endColumn,
+      endColumn
     )
-    console.log("expected entity range", range);
+
     const originalText = editor.getModel().getValueInRange(range) || ''
     const attributes = blockAttributes({ classNames: [className ?? id], attrs })
     const bodyParts = [body_pre, originalText, body_post].filter((d) => d)
