@@ -36,41 +36,61 @@ export default function pressoirNerParagraph(id, { keybindings = [] } = {}) {
       console.log("Retrieved entities", data);
 
       // Step 2: For each entity, create a widget
-      if (data.entities && data.entities.length > 0) {
-        for (const entity of data.entities) {
-          for (const match of entity.matches) {
-            // const startPos = match.start;
-            // const endPos = match.end;
-            
-            console.log(match);
-            const userSelectionType = await manualDesambiguisationType(editor, entity, match);
-            if (!userSelectionType) continue;
+if (data.entities && data.entities.length > 0) {
+  // Store the original selection
+  const originalSelection = editor.getSelection();
+  const originalModel = editor.getModel();
+  const originalText = originalModel.getValueInRange(originalSelection);
 
-            const reconcileResponse = await fetch("https://lincs-api.lincsproject.ca/api/link/reconcile", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                entity: userSelectionType.name,
-                authorities: ["Wikidata"],
-                moreResults: false,
-              }),
-            });
+  // Sort entities by their start position to process them in order
+  const sortedEntities = [...data.entities].sort((a, b) => a.matches[0].start - b.matches[0].start);
 
-            const desambiguisationdata = await reconcileResponse.json();
-            const userSelection = await manualDesambiguisation(editor, desambiguisationdata, entity, match);
-            if (!userSelection) continue;
+  for (const entity of sortedEntities) {
+    for (const match of entity.matches) {
+      // Recalculate the range for the current match
+      const startPos = originalModel.getPositionAt(originalSelection.startLineNumber, originalSelection.startColumn);
+      const matchStartPos = originalModel.getPositionAt(startPos.offset + match.start);
+      const matchEndPos = originalModel.getPositionAt(startPos.offset + match.end);
+      const matchRange = new Range(
+        matchStartPos.lineNumber, matchStartPos.column,
+        matchEndPos.lineNumber, matchEndPos.column
+      );
 
-            const addURI = createInlineBlockCommand('ner', {
-              attrs: null,
-              body_pre: '[',
-              body_post: `]{.${userSelectionType.label} id="${userSelectionType.name}", id${userSelection.authority}="${userSelection.uri}"}`,
-              offset_start: match.start,
-              offset_end: match.end,
-            });
-            addURI.run(editor);
-          }
-        }
-      }
+      // Show the entity selection widget
+      const userSelectionType = await manualDesambiguisationType(editor, entity, match);
+      if (!userSelectionType) continue;
+
+      // Fetch reconciliation data
+      const reconcileResponse = await fetch("https://lincs-api.lincsproject.ca/api/link/reconcile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          entity: userSelectionType.name,
+          authorities: ["Wikidata"],
+          moreResults: false,
+        }),
+      });
+
+      const desambiguisationdata = await reconcileResponse.json();
+      const userSelection = await manualDesambiguisation(editor, desambiguisationdata, entity, match);
+      if (!userSelection) continue;
+
+      // Insert the inline block
+      const addURI = createInlineBlockCommand('ner', {
+        attrs: null,
+        body_pre: '[',
+        body_post: `]{.${userSelectionType.label} id="${userSelectionType.name}", id${userSelection.authority}="${userSelection.uri}"}`,
+        offset_start: match.start,
+        offset_end: match.end,
+      });
+      addURI.run(editor);
+
+      // Restore the original selection for the next iteration
+      editor.setSelection(originalSelection);
+    }
+  }
+}
+
     } catch (error) {
       console.error("Error:", error);
     }
