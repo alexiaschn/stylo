@@ -16,7 +16,7 @@ export default function pressoirNerParagraph(id, { keybindings = [] } = {}) {
    * @param {ICodeEditor} editor
    */
   async function run(editor) {
-    const { startLineNumber, startColumn, endLineNumber, endColumn } = editor.getSelection();
+    let { startLineNumber, startColumn, endLineNumber, endColumn } = editor.getSelection();
     const range = new Range(startLineNumber, startColumn, endLineNumber, endColumn);
     const originalText = editor.getModel().getValueInRange(range) || '';
     console.log("Request function sent for ", originalText);
@@ -34,32 +34,34 @@ export default function pressoirNerParagraph(id, { keybindings = [] } = {}) {
 
       const data = await response.json();
       console.log("Retrieved entities", data);
-
+      // for debug
+      let round = 0;
+      let offsetDelta = 0;
       // Step 2: For each entity, create a widget
-if (data.entities && data.entities.length > 0) {
-  // Store the original selection
-  const originalSelection = editor.getSelection();
-  const originalModel = editor.getModel();
-  const originalText = originalModel.getValueInRange(originalSelection);
+      if (data.entities && data.entities.length > 0) {
+        const sortedEntities = [...data.entities].sort((a, b) => a.matches[0].start - b.matches[0].start);
 
-  // Sort entities by their start position to process them in order
-  const sortedEntities = [...data.entities].sort((a, b) => a.matches[0].start - b.matches[0].start);
+        for (const entity of sortedEntities) {
+          for (const match of entity.matches) {
 
-  for (const entity of sortedEntities) {
-    for (const match of entity.matches) {
-      // Recalculate the range for the current match
-      const startPos = originalModel.getPositionAt(originalSelection.startLineNumber, originalSelection.startColumn);
-      const matchStartPos = originalModel.getPositionAt(startPos.offset + match.start);
-      const matchEndPos = originalModel.getPositionAt(startPos.offset + match.end);
-      const matchRange = new Range(
-        matchStartPos.lineNumber, matchStartPos.column,
-        matchEndPos.lineNumber, matchEndPos.column
-      );
+        // Store the original selection   
+        startColumn = startColumn + offsetDelta;
+        endColumn = endColumn + offsetDelta;
+        let selection = {startLineNumber, startColumn, endLineNumber, endColumn}
+        const originalModel = editor.getModel();
+        const originalText = originalModel.getValueInRange(selection);
 
+        // Sort entities by their start position to process them in order
+        // Track the cumulative offset change
+        ++round;
+        console.log("nb de round avec delta", round, offsetDelta);
+        console.log("selection range before sending new widget", selection);
       // Show the entity selection widget
-      const userSelectionType = await manualDesambiguisationType(editor, entity, match);
+      // selection = editor.getModel().getValueInRange(selection);
+      console.log("longueur de la ligne", editor.getModel().getLineLength(selection.startLineNumber));
+      const userSelectionType = await manualDesambiguisationType(editor, selection, entity, match);
       if (!userSelectionType) continue;
-
+      console.log("after Type");
       // Fetch reconciliation data
       const reconcileResponse = await fetch("https://lincs-api.lincsproject.ca/api/link/reconcile", {
         method: "POST",
@@ -72,7 +74,7 @@ if (data.entities && data.entities.length > 0) {
       });
 
       const desambiguisationdata = await reconcileResponse.json();
-      const userSelection = await manualDesambiguisation(editor, desambiguisationdata, entity, match);
+      const userSelection = await manualDesambiguisation(editor, selection, desambiguisationdata, entity, match);
       if (!userSelection) continue;
 
       // Insert the inline block
@@ -80,13 +82,21 @@ if (data.entities && data.entities.length > 0) {
         attrs: null,
         body_pre: '[',
         body_post: `]{.${userSelectionType.label} id="${userSelectionType.name}", id${userSelection.authority}="${userSelection.uri}"}`,
+        startLineNumber: startLineNumber,
+        startColumn: startColumn,
+        endLineNumber: endLineNumber,
+        endColumn: endColumn,
         offset_start: match.start,
         offset_end: match.end,
       });
       addURI.run(editor);
+      // Calculate the delta introduced by the insertion
+      const insertedText = `[]{.${userSelectionType.label} id="${userSelectionType.name}", id${userSelection.authority}="${userSelection.uri}"}`;
+      const delta = insertedText.length - (match.end - match.start);
+      offsetDelta += delta;
 
       // Restore the original selection for the next iteration
-      editor.setSelection(originalSelection);
+      editor.setSelection(selection);
     }
   }
 }
@@ -100,7 +110,7 @@ if (data.entities && data.entities.length > 0) {
  * @param {Object} entity
  * @param {Range} entityRange
  */
-async function manualDesambiguisationType(editor, entity, match) {
+async function manualDesambiguisationType(editor, selection, entity, match) {
   return new Promise((resolve) => {
     const widget = {
       domNode: null,
@@ -147,19 +157,22 @@ async function manualDesambiguisationType(editor, entity, match) {
         return widget.domNode;
       },
       getPosition: () => {
-        const selection = editor.getSelection();
         return {
           
         position: {
           lineNumber: selection.startLineNumber,
-          column: selection.startColumn + match.end,
+          column: selection.startColumn + (match.end - match.start),
         },
         preference: ['below'],
         };
       },
     };
 
+    console.log("widget type before send");
+
     editor.addContentWidget(widget);
+    console.log("widget type sent");
+
     document.addEventListener('click', (event) => {
       if (widget.domNode && !widget.domNode.contains(event.target)) {
         resolve(null);
@@ -173,7 +186,7 @@ async function manualDesambiguisationType(editor, entity, match) {
    * @param {Array} desambiguisationdata
   //  @param {Range} entityRange
    */
-  async function manualDesambiguisation(editor, desambiguisationdata, entity, entrange) {
+  async function manualDesambiguisation(editor,selection, desambiguisationdata, entity, entrange) {
     return new Promise((resolve) => {
       const widget = {
         domNode: null,
@@ -216,7 +229,6 @@ async function manualDesambiguisationType(editor, entity, match) {
           return widget.domNode;
         },
         getPosition: () => {
-          const selection = editor.getSelection();
           return {
             
           position: {

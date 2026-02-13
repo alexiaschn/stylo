@@ -29,6 +29,10 @@ export default function createInlineBlockCommand(
     attrs = {},
     body_pre = '[',
     body_post = ']',
+    startLineNumber, 
+    startColumn,
+    endLineNumber,
+    endColumn,
     offset_start = 0,
     offset_end = 0,
   } = {}
@@ -37,8 +41,18 @@ export default function createInlineBlockCommand(
    * @param {ICodeEditor} editor
    */
   function run(editor) {
-    const { startLineNumber, startColumn, endLineNumber, endColumn } =
-      editor.getSelection()
+    
+      const {
+          selectionStartLineNumber,
+          selectionStartColumn,
+          selectionEndLineNumber,
+          selectionEndColumn
+      } = editor.getSelection();
+
+      startLineNumber = startLineNumber !== undefined ? startLineNumber : selectionStartLineNumber;
+      startColumn = startColumn !== undefined ? startColumn : selectionStartColumn;
+      endLineNumber = endLineNumber !== undefined ? endLineNumber : selectionEndLineNumber;
+      endColumn = endColumn !== undefined ? endColumn : selectionEndColumn;
     console.log("selection range", { startLineNumber, startColumn, endLineNumber, endColumn });
     console.log(offset_end);
     // let endColumn_true = endColumn; // Default to original endColumn
