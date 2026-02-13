@@ -54,7 +54,7 @@ export default function createInlineBlockCommand(
       endLineNumber = endLineNumber !== undefined ? endLineNumber : selectionEndLineNumber;
       endColumn = endColumn !== undefined ? endColumn : selectionEndColumn;
     console.log("selection range", { startLineNumber, startColumn, endLineNumber, endColumn });
-    console.log(offset_end);
+    console.log("length of ne:", offset_end);
     // let endColumn_true = endColumn; // Default to original endColumn
 
     const range = new Range(

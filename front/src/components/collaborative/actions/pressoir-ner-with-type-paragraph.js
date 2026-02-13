@@ -1,3 +1,7 @@
+// KEEP THE ORIGINAL SELECTION AND ALWAYS SEND THE MANUALDESAMBIGUISATIONTYPE WITH THAT SELECTION. KEEP MATCH.START AND MATCH.END 
+// THEN MANUALLY ADD INLINEBLOCKCOMMAND WITH OFFSET 
+// MEANS CHANGING INLINEBLOCK
+
 import { Range } from 'monaco-editor/esm/vs/editor/editor.api';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import createInlineBlockCommand from './inline-block.js';
@@ -19,8 +23,6 @@ export default function pressoirNerParagraph(id, { keybindings = [] } = {}) {
     let { startLineNumber, startColumn, endLineNumber, endColumn } = editor.getSelection();
     const range = new Range(startLineNumber, startColumn, endLineNumber, endColumn);
     const originalText = editor.getModel().getValueInRange(range) || '';
-    console.log("Request function sent for ", originalText);
-
     try {
       // Step 1: Fetch entity types and names
       const response = await fetch("https://lincs-api.lincsproject.ca/api/ner", {
@@ -43,10 +45,12 @@ export default function pressoirNerParagraph(id, { keybindings = [] } = {}) {
 
         for (const entity of sortedEntities) {
           for (const match of entity.matches) {
-
-        // Store the original selection   
+        if (round > 1) {
+        offsetDelta =  match.start + 6;
         startColumn = startColumn + offsetDelta;
         endColumn = endColumn + offsetDelta;
+        
+        }
         let selection = {startLineNumber, startColumn, endLineNumber, endColumn}
         const originalModel = editor.getModel();
         const originalText = originalModel.getValueInRange(selection);
@@ -55,13 +59,11 @@ export default function pressoirNerParagraph(id, { keybindings = [] } = {}) {
         // Track the cumulative offset change
         ++round;
         console.log("nb de round avec delta", round, offsetDelta);
-        console.log("selection range before sending new widget", selection);
+        console.log("selection range before sending widget", selection, originalText);
       // Show the entity selection widget
-      // selection = editor.getModel().getValueInRange(selection);
-      console.log("longueur de la ligne", editor.getModel().getLineLength(selection.startLineNumber));
+      // pb ; PASSE TOUTES LES NAMED ENTITY IDENTIFIEE QUI SE TROUVENT DANS LE RANGE INITIAL 'MANGE' PAR L'ANNOTATION 
       const userSelectionType = await manualDesambiguisationType(editor, selection, entity, match);
       if (!userSelectionType) continue;
-      console.log("after Type");
       // Fetch reconciliation data
       const reconcileResponse = await fetch("https://lincs-api.lincsproject.ca/api/link/reconcile", {
         method: "POST",
@@ -72,31 +74,34 @@ export default function pressoirNerParagraph(id, { keybindings = [] } = {}) {
           moreResults: false,
         }),
       });
-
+        
       const desambiguisationdata = await reconcileResponse.json();
       const userSelection = await manualDesambiguisation(editor, selection, desambiguisationdata, entity, match);
+      console.log("final user selection", userSelection);
       if (!userSelection) continue;
 
       // Insert the inline block
       const addURI = createInlineBlockCommand('ner', {
         attrs: null,
         body_pre: '[',
-        body_post: `]{.${userSelectionType.label} id="${userSelectionType.name}", id${userSelection.authority}="${userSelection.uri}"}`,
+        body_post: `]{.${userSelectionType.label} id="${userSelection.name}", id${userSelection.authority}="${userSelection.uri}"}`,
         startLineNumber: startLineNumber,
         startColumn: startColumn,
         endLineNumber: endLineNumber,
         endColumn: endColumn,
         offset_start: match.start,
-        offset_end: match.end,
+      offset_end: match.end,
       });
       addURI.run(editor);
       // Calculate the delta introduced by the insertion
-      const insertedText = `[]{.${userSelectionType.label} id="${userSelectionType.name}", id${userSelection.authority}="${userSelection.uri}"}`;
-      const delta = insertedText.length - (match.end - match.start);
-      offsetDelta += delta;
+      // const insertedText = `[]{.${userSelectionType.label} id="${userSelection.name}", id${userSelection.authority}="${userSelection.uri}"}`;
+      // const delta = insertedText.length - (match.end - match.start);
+      // const delta = insertedText.length + (match.end - match.start);
+      // const delta= 0;
+      // offsetDelta += delta;
 
-      // Restore the original selection for the next iteration
       editor.setSelection(selection);
+      // console.log("range selection after insertion", editor.getSelection(), editor.getModel().getValueInRange(selection));
     }
   }
 }
@@ -168,11 +173,7 @@ async function manualDesambiguisationType(editor, selection, entity, match) {
       },
     };
 
-    console.log("widget type before send");
-
     editor.addContentWidget(widget);
-    console.log("widget type sent");
-
     document.addEventListener('click', (event) => {
       if (widget.domNode && !widget.domNode.contains(event.target)) {
         resolve(null);
