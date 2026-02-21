@@ -23,6 +23,7 @@
       "hyperlinkner": "Hyperlink-type NER",
       "inlinequote": "$t(types.inline) citation",
       "italic": "Italique",
+      "nerendblock": "Pressoir end of editor",
       "nernotype": "Pressoir-without-type NER", 
       "nerparagraph": "NER paragraphe entier",
       "pressoirner": "Pressoir-with-type NER",

@@ -45,7 +45,7 @@ export default function pressoirInlineBlockCommand(id,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           entity: originalText,
-          authorities: ["Wikidata", "VIAF-Personal"], 
+          authorities: ["Wikidata"], 
           moreResults: false,
         }),
       });
@@ -62,7 +62,7 @@ export default function pressoirInlineBlockCommand(id,
         const addURI = createInlineBlockCommand('ner', {
           attrs: null,
           body_pre: '[',
-          body_post: `]{.type id="${label}" id${authority}="${uri}"}`,
+          body_post: `]{id="${label}" id${authority}="${uri}"}`,
         });
         addURI.run(editor);
       }

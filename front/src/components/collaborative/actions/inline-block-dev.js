@@ -29,22 +29,41 @@ export default function createInlineBlockCommand(
     attrs = {},
     body_pre = '[',
     body_post = ']',
+    startLineNumber, 
+    startColumn,
+    endLineNumber,
+    endColumn,
+    offset_start = 0,
+    offset_end = 0,
   } = {}
 ) {
   /**
    * @param {ICodeEditor} editor
    */
   function run(editor) {
-    const { startLineNumber, startColumn, endLineNumber, endColumn } =
-      editor.getSelection()
+    
+      const {
+          selectionStartLineNumber,
+          selectionStartColumn,
+          selectionEndLineNumber,
+          selectionEndColumn
+      } = editor.getSelection();
+
+      startLineNumber = startLineNumber !== undefined ? startLineNumber : selectionStartLineNumber;
+      startColumn = startColumn !== undefined ? startColumn : selectionStartColumn;
+      endLineNumber = endLineNumber !== undefined ? endLineNumber : selectionEndLineNumber;
+      endColumn = endColumn !== undefined ? endColumn : selectionEndColumn;
+    console.log("selection range", { startLineNumber, startColumn, endLineNumber, endColumn });
+    console.log("length of ne:", offset_end);
+    // let endColumn_true = endColumn; // Default to original endColumn
 
     const range = new Range(
       startLineNumber,
-      startColumn,
+      startColumn + offset_start,
       endLineNumber,
-      endColumn
+      offset_end !== 0 ? startColumn + offset_end : endColumn,
     )
-
+    console.log("expected entity range", range);
     const originalText = editor.getModel().getValueInRange(range) || ''
     const attributes = blockAttributes({ classNames: [className ?? id], attrs })
     const bodyParts = [body_pre, originalText, body_post].filter((d) => d)

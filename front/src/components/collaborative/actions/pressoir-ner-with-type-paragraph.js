@@ -4,7 +4,7 @@
 
 import { Range } from 'monaco-editor/esm/vs/editor/editor.api';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import createInlineBlockCommand from './inline-block.js';
+import createInlineBlockCommand from './inline-block-dev.js';
 
 /**
  * @typedef {import('monaco-editor').editor.IActionDescriptor} IActionDescriptor
@@ -46,7 +46,7 @@ export default function pressoirNerParagraph(id, { keybindings = [] } = {}) {
         for (const entity of sortedEntities) {
           for (const match of entity.matches) {
         if (round > 1) {
-        offsetDelta =  match.start + 6;
+        offsetDelta =  match.start ;
         startColumn = startColumn + offsetDelta;
         endColumn = endColumn + offsetDelta;
         
@@ -166,20 +166,22 @@ async function manualDesambiguisationType(editor, selection, entity, match) {
           
         position: {
           lineNumber: selection.startLineNumber,
-          column: selection.startColumn + (match.end - match.start),
+          column: selection.startColumn + match.start,
         },
         preference: ['below'],
         };
       },
     };
 
+   
     editor.addContentWidget(widget);
     document.addEventListener('click', (event) => {
       if (widget.domNode && !widget.domNode.contains(event.target)) {
-        resolve(null);
-        editor.removeContentWidget(widget);
-      }
-    });
+        setTimeout(() => {
+          resolve(null);
+          editor.removeContentWidget(widget);
+        }, 10000);
+  }});
   });
 }
   /**
@@ -229,12 +231,13 @@ async function manualDesambiguisationType(editor, selection, entity, match) {
           }
           return widget.domNode;
         },
+        // position of the widget : relative to selection
         getPosition: () => {
           return {
             
           position: {
             lineNumber: selection.startLineNumber,
-            column: selection.startColumn + entrange.end,
+            column: selection.startColumn + entrange.start,
           },
           preference: ['below'],
           };
@@ -242,10 +245,14 @@ async function manualDesambiguisationType(editor, selection, entity, match) {
       };
 
       editor.addContentWidget(widget);
+      
+      editor.addContentWidget(widget);
       document.addEventListener('click', (event) => {
         if (widget.domNode && !widget.domNode.contains(event.target)) {
-          resolve(null);
-          editor.removeContentWidget(widget);
+          setTimeout(() => {
+            resolve(null);
+            editor.removeContentWidget(widget);
+          }, 10000);
         }
       });
     });

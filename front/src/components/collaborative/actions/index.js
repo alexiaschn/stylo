@@ -11,6 +11,7 @@ import pressoirInlineBlockCommand  from './pressoir-ner-inline.js'
 import pressoirNerInlineBlockCommand  from './pressoir-ner-with-type-inline.js'
 import pressoirInlineParagraph  from './pressoir-ner-with-type-paragraph.js'
 import hyperlinkNERInline  from './hyperlink-ner-inline.js'
+import pressoirNerEndBlockCommand  from './pressoir-ner-end-block.js'
 import { Key } from 'lucide-react'
 
 export { Separator } from 'monaco-editor/esm/vs/base/common/actions'
@@ -111,9 +112,12 @@ export const actions = {
        }
     ),
     nerparagraph : pressoirInlineParagraph('nerparagraph', {
-      keybindings: [KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyJ]
-      
+      keybindings: [KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyJ] 
     }),
+    nerendblock : pressoirNerEndBlockCommand('nerendblock', {
+      keybindings: [KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyK] 
+      
+    })
   }
 }
 
@@ -282,6 +286,7 @@ export function EnrichMenu({ editor, t}) {
       _bindAction(actions.enrich.hyperlinkner),
       _bindAction(actions.enrich.pressoirner),
       _bindAction(actions.enrich.nerparagraph),
+      _bindAction(actions.enrich.nerendblock),
     ]
   )
 
